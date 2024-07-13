@@ -1,20 +1,22 @@
-const express = require('express');
+const express = require("express");
 const app = express();
-const cors = require('cors');
+const cors = require("cors");
 const PORT = process.env.PORT || 5000;
-require('dotenv').config();
+require("dotenv").config();
 
-app.use(cors({
-  origin:['http://localhost:5173','http://localhost:5174'],
-  credentials:true
-}));
+app.use(
+  cors({
+    origin: ["http://localhost:5173", "http://localhost:5174"],
+    credentials: true,
+  })
+);
 app.use(express.json());
 
-app.get('/', (req, res) => {
-  res.send('Root Access');
+app.get("/", (req, res) => {
+  res.send("Root Access");
 });
 
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion } = require("mongodb");
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster1.6mzg5rv.mongodb.net/?retryWrites=true&w=majority&appName=Cluster1`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -29,17 +31,36 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     const menuCollections = client
-      .db('tasty-trails')
-      .collection('menu-collections');
-      // getting all menus Data
-    app.get('/menus', async (req, res) => {
+      .db("tasty-trails")
+      .collection("menu-collections");
+    // getting all menus Data
+    const cartCollections = client
+      .db("tasty-trails")
+      .collection("cart-collections");
+    app.get("/menus", async (req, res) => {
       const result = await menuCollections.find({}).toArray();
       res.send(result);
     });
 
-    await client.db('admin').command({ ping: 1 });
+    // carst collectiosn =>
+    app.get("/carts", async (req, res) => {
+      const email = req.query.email;
+      const query = {};
+      if (email) {
+        query.userEmail = email;
+      }
+      const results = await cartCollections.find(query).toArray();
+      res.send(results);
+    });
+    app.post("/carts", async (req, res) => {
+      const data = req.body;
+      const result = await cartCollections.insertOne(data);
+      res.send(result);
+    });
+
+    await client.db("admin").command({ ping: 1 });
     console.log(
-      'Pinged your deployment. You successfully connected to MongoDB!'
+      "Pinged your deployment. You successfully connected to MongoDB!"
     );
   } finally {
   }
