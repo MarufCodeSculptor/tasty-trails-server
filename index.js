@@ -12,6 +12,13 @@ app.use(
 );
 app.use(express.json());
 
+const logger = async (req, res, next) => {
+  // show full url in a ariable
+  const url = req.protocol + "://" + req.get("host") + req.originalUrl;
+  console.log(`hitted to =>> ${url}`);
+  next();
+};
+
 app.get("/", (req, res) => {
   res.send("Root Access");
 });
@@ -37,6 +44,27 @@ async function run() {
     const cartCollections = client
       .db("tasty-trails")
       .collection("cart-collections");
+    const usersCollections = client.db("tasty-trails").collection("users");
+    // getting users  all users  data = > 
+    app.get('/users',logger,async(req,res)=>{
+      const result = await usersCollections.find({}).toArray();
+      res.send(result);
+    })
+    //  postng users data =>
+    app.post("/users", logger, async (req, res) => {
+      const data = req.body;
+      // insert email if user doesn't exist aleady
+      const user = await usersCollections.findOne({ email: req.body.email });
+      if (user) {
+        console.log('user availabe not posted ');
+        return res.send("User already exists");
+        
+      } else {
+        const result = await usersCollections.insertOne(data);
+        res.send(result);
+      }
+    });
+    // getting all menus data
     app.get("/menus", async (req, res) => {
       const result = await menuCollections.find({}).toArray();
       res.send(result);
@@ -57,12 +85,12 @@ async function run() {
       const result = await cartCollections.insertOne(data);
       res.send(result);
     });
-    app.delete('/carts/:id',async(req,res)=>{
+    app.delete("/carts/:id", async (req, res) => {
       const itemId = req.params.id;
-      const query = { _id : new ObjectId(itemId)};
+      const query = { _id: new ObjectId(itemId) };
       const result = await cartCollections.deleteOne(query);
       res.send(result);
-    })
+    });
 
     await client.db("admin").command({ ping: 1 });
     console.log(
