@@ -1,6 +1,7 @@
 const express = require("express");
 const app = express();
 const cors = require("cors");
+const jwt = require("jsonwebtoken");
 const PORT = process.env.PORT || 5000;
 require("dotenv").config();
 
@@ -46,7 +47,9 @@ async function run() {
       .collection("cart-collections");
     const usersCollections = client.db("tasty-trails").collection("users");
     // getting users  all users  data = >
-    app.get("/users", logger, async (req, res) => {
+    app.get("/users", logger, async(req, res) => {
+      const usertoken = req.headers;
+      console.log(usertoken,'authorizations');
       const result = await usersCollections.find({}).toArray();
       res.send(result);
     });
@@ -63,8 +66,31 @@ async function run() {
         res.send(result);
       }
     });
-    // deleting users  =>
 
+    // making token  after user login=>
+    app.post("/jwt", logger, async (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.TOKEN_SECRET, {
+        expiresIn: "1h",
+      });
+
+      res.send({ token });
+    });
+
+    // users status update
+    app.patch("/users/role/:id", logger, async (req, res) => {
+      const userId = req.params.id;
+      const filter = { _id: new ObjectId(userId) };
+      const updatedDoc = {
+        $set: {
+          ...req.body,
+        },
+      };
+      const result = await usersCollections.updateOne(filter, updatedDoc);
+      res.send(result);
+    });
+
+    // deleting users  =>
     app.delete("/users/:id", async (req, res) => {
       const userId = req.params.id;
       const query = { _id: new ObjectId(userId) };
