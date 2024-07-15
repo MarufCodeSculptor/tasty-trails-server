@@ -45,24 +45,31 @@ async function run() {
       .db("tasty-trails")
       .collection("cart-collections");
     const usersCollections = client.db("tasty-trails").collection("users");
-    // getting users  all users  data = > 
-    app.get('/users',logger,async(req,res)=>{
+    // getting users  all users  data = >
+    app.get("/users", logger, async (req, res) => {
       const result = await usersCollections.find({}).toArray();
       res.send(result);
-    })
+    });
     //  postng users data =>
     app.post("/users", logger, async (req, res) => {
       const data = req.body;
       // insert email if user doesn't exist aleady
       const user = await usersCollections.findOne({ email: req.body.email });
       if (user) {
-        console.log('user availabe not posted ');
+        console.log("user availabe not posted ");
         return res.send("User already exists");
-        
       } else {
         const result = await usersCollections.insertOne(data);
         res.send(result);
       }
+    });
+    // deleting users  =>
+
+    app.delete("/users/:id", async (req, res) => {
+      const userId = req.params.id;
+      const query = { _id: new ObjectId(userId) };
+      const result = await usersCollections.deleteOne(query);
+      res.send(result);
     });
     // getting all menus data
     app.get("/menus", async (req, res) => {
