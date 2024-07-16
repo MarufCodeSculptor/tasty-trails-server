@@ -14,9 +14,8 @@ app.use(
 app.use(express.json());
 
 const logger = async (req, res, next) => {
-  // show full url in a ariable
   const url = req.protocol + "://" + req.get("host") + req.originalUrl;
-  console.log(`hitted to =>> ${url}`);
+  console.log(`Request Method: ${req.method} | URL: ${url}`);
   next();
 };
 
@@ -29,14 +28,15 @@ const verifyToken = async (req, res, next) => {
       .status(401)
       .send({ message: "Access denied. No token provided." });
 
-  try {
-    const decoded = jwt.verify(token, process.env.TOKEN_SECRET);
-    console.log(decoded);
-    req.user = decoded;
-    next();
-  } catch (err) {
-    res.status(403).send({ message: "forbidden access" });
-  }
+  jwt.verify(token, process.env.TOKEN_SECRET, (err, decode) => {
+    if (err) {
+      return res.status(403).send({ message: "forbidden access" });
+    }
+    if (decode) {
+      req.user = decode;
+      next();
+    }
+  });
 };
 
 app.get("/", (req, res) => {
@@ -80,13 +80,14 @@ async function run() {
         return res.send("User already exists");
       } else {
         const result = await usersCollections.insertOne(data);
-        res.send(result)
+        res.send(result);
       }
     });
 
     // making token  after user login=>
     app.post("/jwt", logger, async (req, res) => {
       const user = req.body;
+      console.log(user, "the user");
       const token = jwt.sign(user, process.env.TOKEN_SECRET, {
         expiresIn: "1h",
       });
@@ -105,6 +106,18 @@ async function run() {
       };
       const result = await usersCollections.updateOne(filter, updatedDoc);
       res.send(result);
+    });
+
+    app.get("/users/role/:email", logger, verifyToken, async (req, res) => {
+      const email = req.params?.email;
+      const query = { email: email };
+
+      if (req.user.email === email) {
+        const user = await usersCollections.findOne(query);
+        res.send(user);
+      } else {
+        res.status(403).send({ message: "forbidden access" });
+      }
     });
 
     // deleting users  =>
