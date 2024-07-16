@@ -20,6 +20,25 @@ const logger = async (req, res, next) => {
   next();
 };
 
+const verifyToken = async (req, res, next) => {
+  const tokenWithBearer = req.headers?.authorization;
+  const token = tokenWithBearer?.split(" ")[1];
+
+  if (!token)
+    return res
+      .status(401)
+      .send({ message: "Access denied. No token provided." });
+
+  try {
+    const decoded = jwt.verify(token, process.env.TOKEN_SECRET);
+    console.log(decoded);
+    req.user = decoded;
+    next();
+  } catch (err) {
+    res.status(403).send({ message: "forbidden access" });
+  }
+};
+
 app.get("/", (req, res) => {
   res.send("Root Access");
 });
@@ -47,9 +66,7 @@ async function run() {
       .collection("cart-collections");
     const usersCollections = client.db("tasty-trails").collection("users");
     // getting users  all users  data = >
-    app.get("/users", logger, async(req, res) => {
-      const usertoken = req.headers;
-      console.log(usertoken,'authorizations');
+    app.get("/users", logger, verifyToken, async (req, res) => {
       const result = await usersCollections.find({}).toArray();
       res.send(result);
     });
@@ -63,7 +80,7 @@ async function run() {
         return res.send("User already exists");
       } else {
         const result = await usersCollections.insertOne(data);
-        res.send(result);
+        res.send(result)
       }
     });
 
