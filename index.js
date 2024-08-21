@@ -3,14 +3,16 @@ const app = express();
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
 const PORT = process.env.PORT || 5000;
-require("dotenv").config();
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
+// midleweres =>
 app.use(
   cors({
     origin: ["http://localhost:5173", "http://localhost:5174"],
     credentials: true,
   })
 );
+require("dotenv").config();
 app.use(express.json());
 
 const logger = async (req, res, next) => {
@@ -43,7 +45,6 @@ app.get("/", (req, res) => {
   res.send("Root Access");
 });
 
-const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster1.6mzg5rv.mongodb.net/?retryWrites=true&w=majority&appName=Cluster1`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version

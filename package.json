@@ -10,5 +10,8 @@
     "express": "^4.19.2",
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^6.8.0"
+  },
+  "scripts": {
+    "dev":"nodemon index.js"
   }
 }
