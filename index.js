@@ -20,7 +20,7 @@ const logger = async (req, res, next) => {
   console.log(`Request Method: ${req.method} | URL: ${url}`);
   next();
 };
-
+// token verification -----------=>
 const verifyToken = async (req, res, next) => {
   const tokenWithBearer = req.headers?.authorization;
   const token = tokenWithBearer?.split(" ")[1];
@@ -88,11 +88,9 @@ async function run() {
     // making token  after user login=>
     app.post("/jwt", logger, async (req, res) => {
       const user = req.body;
-      console.log(user, "the user");
       const token = jwt.sign(user, process.env.TOKEN_SECRET, {
         expiresIn: "1h",
       });
-
       res.send({ token });
     });
 
