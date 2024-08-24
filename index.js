@@ -132,7 +132,7 @@ async function run() {
       res.send(result);
     });
 
-    // carst collectiosn =>
+    // carts collectiosn =>
     app.get("/carts", async (req, res) => {
       const email = req.query.email;
       const query = {};
