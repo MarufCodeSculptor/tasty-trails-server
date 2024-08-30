@@ -155,6 +155,18 @@ async function run() {
         res.send(result);
       }
     );
+    // adding menus data =>
+    app.post(
+      "/menus/add",
+      logger,
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const data = req.body;
+        const result = await menuCollections.insertOne(data);
+        res.send(result);
+      }
+    );
     // getting all menus data
     app.get("/menus", async (req, res) => {
       const result = await menuCollections.find({}).toArray();
