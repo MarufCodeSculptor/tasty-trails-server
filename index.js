@@ -172,6 +172,13 @@ async function run() {
       const result = await menuCollections.find({}).toArray();
       res.send(result);
     });
+    // removing menus items =>
+    app.delete("/menus/remove/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await menuCollections.deleteOne(query);
+      res.send(result);
+    });
 
     // carts collectiosn =>
     app.get("/carts", async (req, res) => {
@@ -195,9 +202,6 @@ async function run() {
       const result = await cartCollections.deleteOne(query);
       res.send(result);
     });
-
-
-
 
     await client.db("admin").command({ ping: 1 });
     console.log(
