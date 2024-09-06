@@ -196,7 +196,8 @@ async function run() {
       res.send(result);
     });
 
-    // drafts rouete =>>
+
+
 
     await client.db("admin").command({ ping: 1 });
     console.log(
