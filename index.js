@@ -1,9 +1,11 @@
+require("dotenv").config();
 const express = require("express");
 const app = express();
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
 const PORT = process.env.PORT || 5000;
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const stripe = require("stripe")(process.env.STRIPE_SECRET);
 
 // midleweres =>
 app.use(
@@ -12,8 +14,11 @@ app.use(
     credentials: true,
   })
 );
-require("dotenv").config();
+
 app.use(express.json());
+// stripe's midlewere =>
+app.use(express.static("public"));
+
 //-------------------------------------
 
 const logger = async (req, res, next) => {
@@ -181,7 +186,7 @@ async function run() {
       res.send(result);
     });
     //  updating menu items =>
-    app.patch("/menu/update/:id",logger, async (req, res) => {
+    app.patch("/menu/update/:id", logger, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const updatedDoc = {
@@ -221,6 +226,26 @@ async function run() {
       const query = { _id: new ObjectId(itemId) };
       const result = await cartCollections.deleteOne(query);
       res.send(result);
+    });
+
+    // payment intent =>
+    app.post("/create-payment-intent", logger, async (req, res) => {
+      const { price } = req.body;
+      const amount = parseInt(price * 100);
+      console.log(amount,'the amount');
+
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: "usd",
+        description: "Test payment",
+        payment_method_types: ["card"],
+      });
+
+      console.log(paymentIntent.client_secret,'the fucking secret');
+
+      res.send({
+        clientSecret:paymentIntent.client_secret,
+      });
     });
 
     await client.db("admin").command({ ping: 1 });
