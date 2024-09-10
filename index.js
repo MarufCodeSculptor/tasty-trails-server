@@ -4,7 +4,12 @@ const app = express();
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
 const PORT = process.env.PORT || 5000;
-const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const {
+  MongoClient,
+  ServerApiVersion,
+  ObjectId,
+  CommandSucceededEvent,
+} = require("mongodb");
 const stripe = require("stripe")(process.env.STRIPE_SECRET);
 
 // midleweres =>
@@ -52,6 +57,7 @@ async function run() {
       .db("tasty-trails")
       .collection("cart-collections");
     const usersCollections = client.db("tasty-trails").collection("users");
+    const paymentCollections = client.db("tasty-trails").collection("payments");
     // jwt reletaded api =>
     app.post("/jwt", logger, async (req, res) => {
       const user = req.body;
@@ -232,7 +238,7 @@ async function run() {
     app.post("/create-payment-intent", logger, async (req, res) => {
       const { price } = req.body;
       const amount = parseInt(price * 100);
-      console.log(amount,'the amount');
+      console.log(amount, "the amount");
 
       const paymentIntent = await stripe.paymentIntents.create({
         amount: amount,
@@ -241,11 +247,113 @@ async function run() {
         payment_method_types: ["card"],
       });
 
-      console.log(paymentIntent.client_secret,'the fucking secret');
+      console.log(paymentIntent.client_secret, "the fucking secret");
 
       res.send({
-        clientSecret:paymentIntent.client_secret,
+        clientSecret: paymentIntent.client_secret,
       });
+    });
+    app.post("/payment", logger, async (req, res) => {
+      console.log("payment route hitting");
+      const data = req.body;
+      const result = await paymentCollections.insertOne(data);
+      const query = {
+        _id: {
+          $in: data.cartIds.map((id) => new ObjectId(id)),
+        },
+      };
+      const removeOperaions = await cartCollections.deleteMany(query);
+
+      res.send({
+        paymentRes: result,
+        removedCartItems: removeOperaions,
+      });
+    });
+
+    app.get(
+      "/payment-history/:email",
+      logger,
+      verifyToken,
+      async (req, res) => {
+        if (req.params.email !== req.user.email) {
+          return res.status(403).send({ message: "forbidden access" });
+        }
+
+        const query = { email: req.params.email };
+        const result = await paymentCollections.find(query).toArray();
+        res.send(result);
+      }
+    );
+
+    // stats  or analystics
+    app.get(
+      "/admin-stats",
+      logger,
+      verifyToken,
+      verifyAdmin,
+
+      async (req, res) => {
+        const users = await usersCollections.estimatedDocumentCount();
+        const menus = await menuCollections.estimatedDocumentCount();
+        const orders = await paymentCollections.estimatedDocumentCount();
+
+        const result = await paymentCollections
+          .aggregate([
+            {
+              $group: {
+                _id: null,
+                totalRevenue: { $sum: "$price" },
+              },
+            },
+          ])
+          .toArray();
+
+        const reveniue = result.length > 0 ? result[0].totalRevenue : 0;
+
+        // for conting reveniue this is not the best way  this is a way just
+        res.send({
+          users,
+          menus,
+          orders,
+          reveniue,
+        });
+      }
+    );
+
+    // order  stats:
+    app.get("/order-stats", async (req, res) => {
+      const paymentResults = await paymentCollections
+        .aggregate([
+          {
+            $unwind: "$menuIds",
+          },
+          {
+            $lookup: {
+              from: "menu-collections",
+              localField: "menuIds",
+              foreignField: "_id",
+              as: "menuDetails",
+            },
+          },
+
+          {
+            $unwind: "$menuDetails",
+          },
+          {
+            $group: {
+              _id: "$menuDetails.category",
+              quentity: {
+                $sum: 1,
+              },
+              reveniues: {
+                $sum: "$menuDetails.price",
+              },
+            },
+          },
+        ])
+        .toArray();
+
+      res.send(paymentResults);
     });
 
     await client.db("admin").command({ ping: 1 });
