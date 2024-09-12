@@ -321,7 +321,7 @@ async function run() {
     );
 
     // order  stats:
-    app.get("/order-stats", async (req, res) => {
+    app.get("/order-stats", verifyToken, verifyAdmin, async (req, res) => {
       const paymentResults = await paymentCollections
         .aggregate([
           {
@@ -335,7 +335,6 @@ async function run() {
               as: "menuDetails",
             },
           },
-
           {
             $unwind: "$menuDetails",
           },
@@ -348,6 +347,14 @@ async function run() {
               reveniues: {
                 $sum: "$menuDetails.price",
               },
+            },
+          },
+          {
+            $project: {
+              _id: 0,
+              category: "$_id",
+              quentity: 1,
+              revenue: "$reveniues", // Make sure the field "reveniues" exists, or correct its spelling if it's "revenues".
             },
           },
         ])
